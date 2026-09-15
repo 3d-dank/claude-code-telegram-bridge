@@ -35,6 +35,27 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 dns.setDefaultResultOrder('ipv4first')
 net.setDefaultAutoSelectFamily?.(false)
 
+// `claude -p --output-format json` exits non-zero on some hard stops (e.g. a safety-filter
+// refusal) but still writes a full stats JSON blob to stdout with no human-readable message
+// up front — the useful bit, if any (`result`/`error`), sits after a wall of usage/cost
+// fields. Blindly slicing the first 1500 chars (as the old fallback below does) hands the
+// user token-accounting noise and cuts off before the actual reason. Parse first; only fall
+// back to a raw slice when there's truly nothing structured to explain the failure.
+function friendlyChildError(raw) {
+  let j
+  try { j = JSON.parse(raw) } catch { return null }
+  if (!j || typeof j !== 'object') return null
+  if (typeof j.result === 'string' && j.result.trim()) return j.result.trim()
+  if (typeof j.error === 'string' && j.error.trim()) return j.error.trim()
+  if (j.stop_reason === 'refusal') {
+    return "Claude's safety filter declined to continue this response. This is often a false positive on legitimate content — try rephrasing, or send /reset to start a clean session."
+  }
+  if (j.terminal_reason && j.terminal_reason !== 'success') {
+    return `Claude Code stopped early (${j.terminal_reason}). Try again, or send /reset to start a clean session.`
+  }
+  return null
+}
+
 // Run a command with stdin CLOSED (claude -p otherwise waits on an empty stdin pipe
 // when launched by systemd). Resolves with stdout; rejects with stderr on non-zero exit.
 function run(bin, args, opts = {}) {
@@ -47,8 +68,10 @@ function run(bin, args, opts = {}) {
     child.on('error', e => { clearTimeout(timer); reject(e) })
     child.on('close', code => {
       clearTimeout(timer)
-      if (code === 0) resolve(out)
-      else reject(new Error((err || out || `exit ${code}`).slice(0, 1500)))
+      if (code === 0) { resolve(out); return }
+      const raw = err || out || `exit ${code}`
+      console.error(`[bridge] child exit ${code}: ${raw.slice(0, 2000)}`)
+      reject(new Error(friendlyChildError(raw) || raw.slice(0, 1500)))
     })
   })
 }
