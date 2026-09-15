@@ -1,0 +1,16 @@
+{
+  "name": "claude-code-telegram-bridge",
+  "version": "1.0.0",
+  "description": "Bridge a Telegram chat to a Claude Code CLI session, with defense-in-depth against misdelivery and automatic session-cost rollover.",
+  "type": "module",
+  "main": "bridge.mjs",
+  "scripts": {
+    "start": "node bridge.mjs",
+    "test": "node test-child-env.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "dependencies": {}
+}

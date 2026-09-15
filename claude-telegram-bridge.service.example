@@ -1,0 +1,19 @@
+# Copy to /etc/systemd/system/claude-telegram-bridge.service, edit the paths,
+# then: systemctl daemon-reload && systemctl enable --now claude-telegram-bridge
+[Unit]
+Description=Claude Code <-> Telegram bridge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/path/to/claude-code-telegram-bridge/config.env
+ExecStart=/usr/bin/node /path/to/claude-code-telegram-bridge/bridge.mjs
+WorkingDirectory=/path/to/claude-code-telegram-bridge
+Restart=always
+RestartSec=5
+StandardOutput=append:/path/to/claude-code-telegram-bridge/bridge.log
+StandardError=append:/path/to/claude-code-telegram-bridge/bridge.log
+
+[Install]
+WantedBy=multi-user.target

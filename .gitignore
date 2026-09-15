@@ -1,0 +1,13 @@
+# Secrets — config.env holds the live TELEGRAM_BOT_TOKEN. Never commit.
+config.env
+
+# Per-chat runtime state (session ids, summaries)
+sessions/
+
+# Runtime logs
+*.log
+
+# Local backups
+*.bak-*
+
+node_modules/
